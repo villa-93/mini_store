@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro - Mini Store</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-box">
+            <div class="auth-header">
+                <div class="auth-icon">📝</div>
+                <h1 class="auth-title">Crear Cuenta</h1>
+                <p class="auth-subtitle">Únete a Mini Store hoy</p>
+            </div>
+
+            <div id="alert-container"></div>
+
+            <form id="registroForm">
+                <div class="form-group">
+                    <label for="nombre" class="form-label">Nombre Completo</label>
+                    <input type="text" id="nombre" class="form-input" placeholder="Juan Pérez" required minlength="3">
+                </div>
+
+                <div class="form-group">
+                    <label for="correo" class="form-label">Correo Electrónico</label>
+                    <input type="email" id="correo" class="form-input" placeholder="tu@email.com" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="contrasena" class="form-label">Contraseña</label>
+                    <input type="password" id="contrasena" class="form-input" placeholder="Mínimo 6 caracteres" required minlength="6">
+                    <small class="text-muted">La contraseña debe tener al menos 6 caracteres</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="confirmar" class="form-label">Confirmar Contraseña</label>
+                    <input type="password" id="confirmar" class="form-input" placeholder="Repite tu contraseña" required>
+                </div>
+
+                <div class="form-group">
+                    <button type="submit" class="btn btn-primary btn-block" id="btnRegistro">Crear Cuenta</button>
+                </div>
+
+                <hr style="margin: 1.5rem 0; border: none; border-top: 1px solid #e5e7eb;">
+
+                <div class="text-center">
+                    <p class="text-muted">¿Ya tienes cuenta? <a href="login.html" class="link-text">Inicia sesión</a></p>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const registroForm = document.getElementById('registroForm');
+        const btnRegistro = document.getElementById('btnRegistro');
+        const alertContainer = document.getElementById('alert-container');
+
+        function mostrarAlerta(mensaje, tipo = 'error') {
+            alertContainer.innerHTML = `<div class="alert alert-${tipo}">${tipo === 'error' ? '❌' : '✅'} ${mensaje}</div>`;
+            setTimeout(() => { alertContainer.innerHTML = ''; }, 5000);
+        }
+
+        function validarEmail(email) {
+            return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        }
+
+        registroForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const nombre = document.getElementById('nombre').value.trim();
+            const correo = document.getElementById('correo').value.trim();
+            const contrasena = document.getElementById('contrasena').value;
+            const confirmar = document.getElementById('confirmar').value;
+
+            if (!nombre || !correo || !contrasena || !confirmar) {
+                mostrarAlerta('Por favor completa todos los campos');
+                return;
+            }
+
+            if (nombre.length < 3) {
+                mostrarAlerta('El nombre debe tener al menos 3 caracteres');
+                return;
+            }
+
+            if (!validarEmail(correo)) {
+                mostrarAlerta('Por favor ingresa un correo válido');
+                return;
+            }
+
+            if (contrasena.length < 6) {
+                mostrarAlerta('La contraseña debe tener al menos 6 caracteres');
+                return;
+            }
+
+            if (contrasena !== confirmar) {
+                mostrarAlerta('Las contraseñas no coinciden');
+                return;
+            }
+
+            btnRegistro.disabled = true;
+            btnRegistro.textContent = 'Creando cuenta...';
+
+            try {
+                console.log('Enviando petición a: http://localhost:3000/api/registro');
+                
+                const response = await fetch('http://localhost:3000/api/registro', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ nombre, correo, contrasena })
+                });
+
+                console.log('Respuesta recibida:', response.status);
+
+                const data = await response.json();
+                console.log('Data:', data);
+
+                if (response.ok) {
+                    mostrarAlerta('¡Cuenta creada exitosamente! Redirigiendo al login...', 'success');
+                    setTimeout(() => {
+                        window.location.href = 'login.html';
+                    }, 2000);
+                } else {
+                    mostrarAlerta(data.error || 'Error al crear la cuenta');
+                    btnRegistro.disabled = false;
+                    btnRegistro.textContent = 'Crear Cuenta';
+                }
+            } catch (error) {
+                console.error('Error completo:', error);
+                mostrarAlerta('Error de conexión con el servidor');
+                btnRegistro.disabled = false;
+                btnRegistro.textContent = 'Crear Cuenta';
+            }
+        });
+
+        document.getElementById('confirmar').addEventListener('input', function() {
+            const contrasena = document.getElementById('contrasena').value;
+            const confirmar = this.value;
+            
+            if (confirmar && contrasena !== confirmar) {
+                this.style.borderColor = '#ef4444';
+            } else {
+                this.style.borderColor = '#10b981';
+            }
+        });
+    </script>
+</body>
+</html>

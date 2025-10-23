@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Factura - Mini Store</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white; }
+            .factura-container { box-shadow: none; margin: 0; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar no-print">
+        <div class="navbar-container">
+            <a href="index.html" class="logo">
+                <span class="logo-icon">⚡</span>
+                Mini Store
+            </a>
+            <ul class="nav-links">
+                <li><a href="index.html">🏠 Inicio</a></li>
+                <li><a href="perfil.html">👤 Perfil</a></li>
+                <li><a href="pedidos.html">📦 Mis Pedidos</a></li>
+                <li>
+                    <a href="carrito.html">
+                        🛒 Carrito
+                        <span class="cart-badge" id="cartCount">0</span>
+                    </a>
+                </li>
+                <li><a href="#" id="btnLogout">🚪 Salir</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Contenido -->
+    <div class="container">
+        <div class="no-print mb-3">
+            <button onclick="window.print()" class="btn btn-primary">🖨️ Imprimir Factura</button>
+            <a href="pedidos.html" class="btn btn-secondary">← Volver a Pedidos</a>
+        </div>
+
+        <!-- Loading -->
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+        </div>
+
+        <!-- Factura -->
+        <div id="facturaContainer" class="factura-container" style="display: none; background: white; padding: 3rem; border-radius: 15px; box-shadow: var(--shadow-lg); max-width: 800px; margin: 0 auto;">
+            <!-- Encabezado -->
+            <div style="text-align: center; margin-bottom: 3rem; border-bottom: 3px solid var(--primary); padding-bottom: 2rem;">
+                <div style="font-size: 3rem; color: var(--primary); margin-bottom: 0.5rem;">⚡</div>
+                <h1 style="color: var(--dark); margin-bottom: 0.5rem;">Mini Store</h1>
+                <p style="color: var(--gray); font-size: 0.95rem;">Tienda de Equipos Electrónicos</p>
+                <p style="color: var(--gray); font-size: 0.85rem;">NIT: 900.123.456-7 | Tel: +57 310 123 4567</p>
+            </div>
+
+            <!-- Información del pedido -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+                <div>
+                    <h3 style="color: var(--dark); margin-bottom: 1rem; font-size: 1.1rem;">📋 Información del Pedido</h3>
+                    <p style="margin-bottom: 0.5rem;"><strong>Pedido #:</strong> <span id="numeroPedido">-</span></p>
+                    <p style="margin-bottom: 0.5rem;"><strong>Fecha:</strong> <span id="fechaPedido">-</span></p>
+                    <p style="margin-bottom: 0.5rem;"><strong>Estado:</strong> <span id="estadoPedido">-</span></p>
+                    <p style="margin-bottom: 0.5rem;"><strong>Método de Pago:</strong> <span id="metodoPago">-</span></p>
+                </div>
+                <div>
+                    <h3 style="color: var(--dark); margin-bottom: 1rem; font-size: 1.1rem;">👤 Datos del Cliente</h3>
+                    <p style="margin-bottom: 0.5rem;"><strong>Nombre:</strong> <span id="nombreCliente">-</span></p>
+                    <p style="margin-bottom: 0.5rem;"><strong>Email:</strong> <span id="emailCliente">-</span></p>
+                    <p style="margin-bottom: 0.5rem;"><strong>Dirección de Envío:</strong></p>
+                    <p style="color: var(--gray); font-size: 0.9rem;" id="direccionEnvio">-</p>
+                </div>
+            </div>
+
+            <!-- Referencia de pago -->
+            <div style="background: var(--primary-light); padding: 1rem; border-radius: 10px; margin-bottom: 2rem;">
+                <p style="text-align: center; margin: 0;">
+                    <strong>Referencia de Pago:</strong> <span id="referenciaPago" style="color: var(--primary); font-weight: bold;">-</span>
+                </p>
+            </div>
+
+            <!-- Tabla de productos -->
+            <div style="margin-bottom: 2rem;">
+                <h3 style="color: var(--dark); margin-bottom: 1rem;">🛍️ Productos</h3>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th style="text-align: center;">Cantidad</th>
+                            <th style="text-align: right;">Precio Unit.</th>
+                            <th style="text-align: right;">Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody id="productosTabla">
+                        <!-- Productos se cargarán aquí -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Totales -->
+            <div style="text-align: right; margin-bottom: 2rem;">
+                <div style="display: inline-block; text-align: left; min-width: 300px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; padding-bottom: 0.5rem;">
+                        <span style="color: var(--gray);">Subtotal:</span>
+                        <span style="font-weight: 600;">$<span id="subtotalFactura">0</span></span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; padding-bottom: 0.5rem;">
+                        <span style="color: var(--gray);">Envío:</span>
+                        <span style="font-weight: 600; color: var(--success);">Gratis</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; padding-bottom: 1rem; border-bottom: 2px solid var(--primary);">
+                        <span style="color: var(--gray);">IVA (19%):</span>
+                        <span style="font-weight: 600;">$<span id="ivaFactura">0</span></span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 1.3rem;">
+                        <span style="font-weight: bold;">TOTAL:</span>
+                        <span style="font-weight: bold; color: var(--primary);">$<span id="totalFactura">0</span></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div style="text-align: center; padding-top: 2rem; border-top: 2px solid #e5e7eb; color: var(--gray); font-size: 0.85rem;">
+                <p style="margin-bottom: 0.5rem;">✅ <strong>Pago Aprobado</strong></p>
+                <p style="margin-bottom: 1rem;">Gracias por tu compra. Te notificaremos sobre el estado de tu pedido.</p>
+                <p>www.ministore.com | contacto@ministore.com</p>
+            </div>
+        </div>
+
+        <!-- Error -->
+        <div id="errorContainer" style="display: none; text-align: center; padding: 3rem;">
+            <div style="font-size: 4rem; margin-bottom: 1rem;">❌</div>
+            <h3>No se pudo cargar la factura</h3>
+            <p class="text-muted mb-3">El pedido no existe o no tienes permiso para verlo</p>
+            <a href="pedidos.html" class="btn btn-primary">Volver a Pedidos</a>
+        </div>
+    </div>
+
+    <script>
+        let usuario = null;
+
+        // Verificar sesión
+        async function verificarSesion() {
+            try {
+                const response = await fetch('/api/sesion');
+                const data = await response.json();
+                
+                if (!data.autenticado) {
+                    window.location.href = 'login.html';
+                    return;
+                }
+                
+                usuario = data.usuario;
+                cargarFactura();
+                actualizarContadorCarrito();
+            } catch (error) {
+                console.error('Error:', error);
+                window.location.href = 'login.html';
+            }
+        }
+
+        // Cargar factura
+        async function cargarFactura() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const id_pedido = urlParams.get('pedido');
+
+            if (!id_pedido) {
+                mostrarError();
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/pedidos/${id_pedido}`);
+                const data = await response.json();
+
+                if (response.status === 404 || data.length === 0) {
+                    mostrarError();
+                    return;
+                }
+
+                const pedido = data[0];
+                mostrarFactura(pedido, data);
+            } catch (error) {
+                console.error('Error al cargar factura:', error);
+                mostrarError();
+            }
+        }
+
+        // Mostrar factura
+        function mostrarFactura(pedido, productos) {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('facturaContainer').style.display = 'block';
+
+            // Información del pedido
+            document.getElementById('numeroPedido').textContent = pedido.id_pedido;
+            document.getElementById('fechaPedido').textContent = formatearFecha(pedido.fecha);
+            
+            const estado = obtenerEstado(pedido.estado);
+            document.getElementById('estadoPedido').innerHTML = `<span class="badge badge-${estado.color}">${estado.icono} ${estado.texto}</span>`;
+            
+            document.getElementById('metodoPago').textContent = formatearMetodoPago(pedido.metodo_pago);
+            document.getElementById('referenciaPago').textContent = pedido.referencia_pago || 'N/A';
+
+            // Datos del cliente
+            document.getElementById('nombreCliente').textContent = usuario.nombre;
+            document.getElementById('emailCliente').textContent = usuario.correo;
+            document.getElementById('direccionEnvio').textContent = pedido.direccion_envio || 'No especificada';
+
+            // Productos
+            const productosHTML = productos.map(p => `
+                <tr>
+                    <td>${p.producto_nombre}</td>
+                    <td style="text-align: center;">${p.cantidad}</td>
+                    <td style="text-align: right;">$${formatearPrecio(p.precio_unitario)}</td>
+                    <td style="text-align: right;">$${formatearPrecio(p.subtotal)}</td>
+                </tr>
+            `).join('');
+            
+            document.getElementById('productosTabla').innerHTML = productosHTML;
+
+            // Totales
+            const subtotal = pedido.total / 1.19; // Sin IVA
+            const iva = pedido.total - subtotal;
+            
+            document.getElementById('subtotalFactura').textContent = formatearPrecio(subtotal);
+            document.getElementById('ivaFactura').textContent = formatearPrecio(iva);
+            document.getElementById('totalFactura').textContent = formatearPrecio(pedido.total);
+        }
+
+        // Mostrar error
+        function mostrarError() {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('errorContainer').style.display = 'block';
+        }
+
+        // Obtener estado del pedido
+        function obtenerEstado(estado) {
+            const estados = {
+                'pendiente': { texto: 'Pendiente', color: 'warning', icono: '⏳' },
+                'procesando': { texto: 'Procesando', color: 'info', icono: '⚙️' },
+                'enviado': { texto: 'Enviado', color: 'info', icono: '🚚' },
+                'entregado': { texto: 'Entregado', color: 'success', icono: '✅' },
+                'cancelado': { texto: 'Cancelado', color: 'danger', icono: '❌' }
+            };
+            return estados[estado] || estados['pendiente'];
+        }
+
+        // Formatear método de pago
+        function formatearMetodoPago(metodo) {
+            const metodos = {
+                'tarjeta': '💳 Tarjeta de Crédito/Débito',
+                'pse': '🏦 PSE',
+                'efectivo': '💵 Efectivo'
+            };
+            return metodos[metodo] || metodo;
+        }
+
+        // Actualizar contador del carrito
+        async function actualizarContadorCarrito() {
+            try {
+                const response = await fetch('/api/carrito');
+                const data = await response.json();
+                const total = data.items.reduce((sum, item) => sum + item.cantidad, 0);
+                document.getElementById('cartCount').textContent = total;
+            } catch (error) {
+                console.error('Error al actualizar carrito:', error);
+            }
+        }
+
+        // Cerrar sesión
+        document.getElementById('btnLogout').addEventListener('click', async (e) => {
+            e.preventDefault();
+            if (confirm('¿Estás seguro que deseas cerrar sesión?')) {
+                try {
+                    await fetch('/api/logout', { method: 'POST' });
+                    window.location.href = 'login.html';
+                } catch (error) {
+                    console.error('Error al cerrar sesión:', error);
+                }
+            }
+        });
+
+        function formatearPrecio(precio) {
+            return new Intl.NumberFormat('es-CO', {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            }).format(precio);
+        }
+
+        function formatearFecha(fecha) {
+            return new Date(fecha).toLocaleDateString('es-CO', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iniciar Sesión - Mini Store</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-box">
+            <div class="auth-header">
+                <div class="auth-icon">🔐</div>
+                <h1 class="auth-title">Bienvenido a Mini Store</h1>
+                <p class="auth-subtitle">Inicia sesión para continuar</p>
+            </div>
+
+            <div id="alert-container"></div>
+
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="correo" class="form-label">Correo Electrónico</label>
+                    <input 
+                        type="email" 
+                        id="correo" 
+                        class="form-input" 
+                        placeholder="tu@email.com"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="contrasena" class="form-label">Contraseña</label>
+                    <input 
+                        type="password" 
+                        id="contrasena" 
+                        class="form-input" 
+                        placeholder="Tu contraseña"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <button type="submit" class="btn btn-primary btn-block" id="btnLogin">
+                        Iniciar Sesión
+                    </button>
+                </div>
+
+                <div class="text-center">
+                    <a href="recuperar.html" class="link-text">¿Olvidaste tu contraseña?</a>
+                </div>
+
+                <hr style="margin: 1.5rem 0; border: none; border-top: 1px solid #e5e7eb;">
+
+                <div class="text-center">
+                    <p class="text-muted">¿No tienes cuenta? 
+                        <a href="registro.html" class="link-text">Regístrate aquí</a>
+                    </p>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const loginForm = document.getElementById('loginForm');
+        const btnLogin = document.getElementById('btnLogin');
+        const alertContainer = document.getElementById('alert-container');
+
+        // Verificar si ya hay sesión activa
+        async function verificarSesion() {
+            try {
+                const response = await fetch('/api/sesion');
+                const data = await response.json();
+                if (data.autenticado) {
+                    window.location.href = 'index.html';
+                }
+            } catch (error) {
+                console.error('Error verificando sesión:', error);
+            }
+        }
+
+        verificarSesion();
+
+        function mostrarAlerta(mensaje, tipo = 'error') {
+            alertContainer.innerHTML = `
+                <div class="alert alert-${tipo}">
+                    ${tipo === 'error' ? '❌' : '✅'} ${mensaje}
+                </div>
+            `;
+            
+            setTimeout(() => {
+                alertContainer.innerHTML = '';
+            }, 5000);
+        }
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const correo = document.getElementById('correo').value.trim();
+            const contrasena = document.getElementById('contrasena').value;
+
+            // Validación básica
+            if (!correo || !contrasena) {
+                mostrarAlerta('Por favor completa todos los campos');
+                return;
+            }
+
+            // Deshabilitar botón durante el proceso
+            btnLogin.disabled = true;
+            btnLogin.textContent = 'Iniciando sesión...';
+
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ correo, contrasena })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    mostrarAlerta('¡Inicio de sesión exitoso! Redirigiendo...', 'success');
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 1500);
+                } else {
+                    mostrarAlerta(data.error || 'Error al iniciar sesión');
+                    btnLogin.disabled = false;
+                    btnLogin.textContent = 'Iniciar Sesión';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                mostrarAlerta('Error de conexión con el servidor');
+                btnLogin.disabled = false;
+                btnLogin.textContent = 'Iniciar Sesión';
+            }
+        });
+    </script>
+</body>
+</html>

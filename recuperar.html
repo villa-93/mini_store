@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recuperar Contraseña - Mini Store</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-box">
+            <div class="auth-header">
+                <div class="auth-icon">🔑</div>
+                <h1 class="auth-title">Recuperar Contraseña</h1>
+                <p class="auth-subtitle">Te ayudaremos a recuperar tu cuenta</p>
+            </div>
+
+            <div id="alert-container"></div>
+
+            <!-- Paso 1: Solicitar correo -->
+            <div id="step1">
+                <form id="solicitarForm">
+                    <div class="form-group">
+                        <label for="correo" class="form-label">Correo Electrónico</label>
+                        <input 
+                            type="email" 
+                            id="correo" 
+                            class="form-input" 
+                            placeholder="tu@email.com"
+                            required
+                        >
+                        <small class="text-muted">Ingresa el correo asociado a tu cuenta</small>
+                    </div>
+
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-primary btn-block" id="btnSolicitar">
+                            Solicitar Recuperación
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Paso 2: Ingresar token y nueva contraseña -->
+            <div id="step2" style="display: none;">
+                <form id="restablecerForm">
+                    <div class="alert alert-success">
+                        ✅ Se ha generado un token de recuperación. En producción, este se enviaría por correo.
+                    </div>
+
+                    <div class="form-group">
+                        <label for="token" class="form-label">Token de Recuperación</label>
+                        <input 
+                            type="text" 
+                            id="token" 
+                            class="form-input" 
+                            placeholder="Ingresa el token"
+                            required
+                            readonly
+                        >
+                        <small class="text-muted">Token generado automáticamente (solo para pruebas)</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="nuevaContrasena" class="form-label">Nueva Contraseña</label>
+                        <input 
+                            type="password" 
+                            id="nuevaContrasena" 
+                            class="form-input" 
+                            placeholder="Mínimo 6 caracteres"
+                            required
+                            minlength="6"
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="confirmarNueva" class="form-label">Confirmar Nueva Contraseña</label>
+                        <input 
+                            type="password" 
+                            id="confirmarNueva" 
+                            class="form-input" 
+                            placeholder="Repite tu contraseña"
+                            required
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-primary btn-block" id="btnRestablecer">
+                            Restablecer Contraseña
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <hr style="margin: 1.5rem 0; border: none; border-top: 1px solid #e5e7eb;">
+
+            <div class="text-center">
+                <a href="login.html" class="link-text">← Volver al login</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const solicitarForm = document.getElementById('solicitarForm');
+        const restablecerForm = document.getElementById('restablecerForm');
+        const step1 = document.getElementById('step1');
+        const step2 = document.getElementById('step2');
+        const alertContainer = document.getElementById('alert-container');
+        const btnSolicitar = document.getElementById('btnSolicitar');
+        const btnRestablecer = document.getElementById('btnRestablecer');
+
+        function mostrarAlerta(mensaje, tipo = 'error') {
+            alertContainer.innerHTML = `
+                <div class="alert alert-${tipo}">
+                    ${tipo === 'error' ? '❌' : '✅'} ${mensaje}
+                </div>
+            `;
+            
+            setTimeout(() => {
+                if (tipo !== 'success') {
+                    alertContainer.innerHTML = '';
+                }
+            }, 5000);
+        }
+
+        // Paso 1: Solicitar token
+        solicitarForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const correo = document.getElementById('correo').value.trim();
+
+            if (!correo) {
+                mostrarAlerta('Por favor ingresa tu correo');
+                return;
+            }
+
+            btnSolicitar.disabled = true;
+            btnSolicitar.textContent = 'Procesando...';
+
+            try {
+                const response = await fetch('/api/recuperar-contrasena', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ correo })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Mostrar paso 2 con el token
+                    document.getElementById('token').value = data.token;
+                    step1.style.display = 'none';
+                    step2.style.display = 'block';
+                    mostrarAlerta('Token generado correctamente', 'success');
+                } else {
+                    mostrarAlerta(data.error || 'Error al solicitar recuperación');
+                    btnSolicitar.disabled = false;
+                    btnSolicitar.textContent = 'Solicitar Recuperación';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                mostrarAlerta('Error de conexión con el servidor');
+                btnSolicitar.disabled = false;
+                btnSolicitar.textContent = 'Solicitar Recuperación';
+            }
+        });
+
+        // Paso 2: Restablecer contraseña
+        restablecerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const token = document.getElementById('token').value;
+            const nuevaContrasena = document.getElementById('nuevaContrasena').value;
+            const confirmarNueva = document.getElementById('confirmarNueva').value;
+
+            if (nuevaContrasena.length < 6) {
+                mostrarAlerta('La contraseña debe tener al menos 6 caracteres');
+                return;
+            }
+
+            if (nuevaContrasena !== confirmarNueva) {
+                mostrarAlerta('Las contraseñas no coinciden');
+                return;
+            }
+
+            btnRestablecer.disabled = true;
+            btnRestablecer.textContent = 'Restableciendo...';
+
+            try {
+                const response = await fetch('/api/restablecer-contrasena', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ token, nuevaContrasena })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    mostrarAlerta('¡Contraseña actualizada! Redirigiendo al login...', 'success');
+                    setTimeout(() => {
+                        window.location.href = 'login.html';
+                    }, 2000);
+                } else {
+                    mostrarAlerta(data.error || 'Error al restablecer contraseña');
+                    btnRestablecer.disabled = false;
+                    btnRestablecer.textContent = 'Restablecer Contraseña';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                mostrarAlerta('Error de conexión con el servidor');
+                btnRestablecer.disabled = false;
+                btnRestablecer.textContent = 'Restablecer Contraseña';
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mis Pedidos - Mini Store</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="navbar-container">
+            <a href="index.html" class="logo">
+                <span class="logo-icon">⚡</span>
+                Mini Store
+            </a>
+            <ul class="nav-links">
+                <li><a href="index.html">🏠 Inicio</a></li>
+                <li><a href="perfil.html">👤 Perfil</a></li>
+                <li><a href="pedidos.html">📦 Mis Pedidos</a></li>
+                <li>
+                    <a href="carrito.html">
+                        🛒 Carrito
+                        <span class="cart-badge" id="cartCount">0</span>
+                    </a>
+                </li>
+                <li><a href="#" id="btnLogout">🚪 Salir</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Contenido -->
+    <div class="container">
+        <h1 style="color: var(--dark); margin-bottom: 2rem;">📦 Mis Pedidos</h1>
+
+        <div id="alert-container"></div>
+
+        <!-- Loading -->
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+        </div>
+
+        <!-- Sin pedidos -->
+        <div id="noPedidos" style="display: none; text-align: center; padding: 3rem;">
+            <div style="font-size: 5rem; margin-bottom: 1rem;">📦</div>
+            <h3>No tienes pedidos aún</h3>
+            <p class="text-muted mb-3">Realiza tu primera compra en nuestra tienda</p>
+            <a href="index.html" class="btn btn-primary">Ver Productos</a>
+        </div>
+
+        <!-- Lista de pedidos -->
+        <div id="pedidosContainer">
+            <!-- Pedidos se cargarán aquí -->
+        </div>
+    </div>
+
+    <script>
+        let pedidos = [];
+
+        // Verificar sesión
+        async function verificarSesion() {
+            try {
+                const response = await fetch('/api/sesion');
+                const data = await response.json();
+                
+                if (!data.autenticado) {
+                    window.location.href = 'login.html';
+                    return;
+                }
+                
+                cargarPedidos();
+                actualizarContadorCarrito();
+            } catch (error) {
+                console.error('Error:', error);
+                window.location.href = 'login.html';
+            }
+        }
+
+        // Cargar pedidos
+        async function cargarPedidos() {
+            const loading = document.getElementById('loading');
+            const noPedidos = document.getElementById('noPedidos');
+            const container = document.getElementById('pedidosContainer');
+
+            try {
+                const response = await fetch('/api/pedidos');
+                pedidos = await response.json();
+
+                loading.style.display = 'none';
+
+                if (pedidos.length === 0) {
+                    noPedidos.style.display = 'block';
+                    return;
+                }
+
+                container.innerHTML = pedidos.map(pedido => {
+                    const estado = obtenerEstado(pedido.estado);
+                    return `
+                        <div class="card mb-3" style="cursor: pointer;" onclick="verDetalle(${pedido.id_pedido})">
+                            <div class="flex-between">
+                                <div>
+                                    <h3 style="color: var(--dark); margin-bottom: 0.5rem;">
+                                        Pedido #${pedido.id_pedido}
+                                    </h3>
+                                    <p class="text-muted" style="margin-bottom: 1rem;">
+                                        📅 ${formatearFecha(pedido.fecha)}
+                                    </p>
+                                    <span class="badge badge-${estado.color}">${estado.icono} ${estado.texto}</span>
+                                </div>
+                                <div style="text-align: right;">
+                                    <p style="font-size: 1.5rem; font-weight: bold; color: var(--primary); margin-bottom: 0.5rem;">
+                                        $${formatearPrecio(pedido.total)}
+                                    </p>
+                                    <a href="factura.html?pedido=${pedido.id_pedido}" class="btn btn-primary btn-small" onclick="event.stopPropagation()">
+                                        📄 Ver Factura
+                                    </a>
+                                </div>
+                            </div>
+                            ${pedido.direccion_envio ? `
+                                <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e5e7eb;">
+                                    <p class="text-muted" style="font-size: 0.9rem;">
+                                        <strong>Dirección:</strong> ${pedido.direccion_envio}
+                                    </p>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error('Error al cargar pedidos:', error);
+                loading.style.display = 'none';
+                mostrarAlerta('Error al cargar pedidos', 'error');
+            }
+        }
+
+        // Ver detalle del pedido
+        async function verDetalle(id_pedido) {
+            window.location.href = `factura.html?pedido=${id_pedido}`;
+        }
+
+        // Obtener estado del pedido
+        function obtenerEstado(estado) {
+            const estados = {
+                'pendiente': { texto: 'Pendiente', color: 'warning', icono: '⏳' },
+                'procesando': { texto: 'Procesando', color: 'info', icono: '⚙️' },
+                'enviado': { texto: 'Enviado', color: 'info', icono: '🚚' },
+                'entregado': { texto: 'Entregado', color: 'success', icono: '✅' },
+                'cancelado': { texto: 'Cancelado', color: 'danger', icono: '❌' }
+            };
+            return estados[estado] || estados['pendiente'];
+        }
+
+        // Actualizar contador del carrito
+        async function actualizarContadorCarrito() {
+            try {
+                const response = await fetch('/api/carrito');
+                const data = await response.json();
+                const total = data.items.reduce((sum, item) => sum + item.cantidad, 0);
+                document.getElementById('cartCount').textContent = total;
+            } catch (error) {
+                console.error('Error al actualizar carrito:', error);
+            }
+        }
+
+        // Cerrar sesión
+        document.getElementById('btnLogout').addEventListener('click', async (e) => {
+            e.preventDefault();
+            if (confirm('¿Estás seguro que deseas cerrar sesión?')) {
+                try {
+                    await fetch('/api/logout', { method: 'POST' });
+                    window.location.href = 'login.html';
+                } catch (error) {
+                    console.error('Error al cerrar sesión:', error);
+                }
+            }
+        });
+
+        function formatearPrecio(precio) {
+            return new Intl.NumberFormat('es-CO', {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            }).format(precio);
+        }
+
+        function formatearFecha(fecha) {
+            return new Date(fecha).toLocaleDateString('es-CO', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function mostrarAlerta(mensaje, tipo = 'error') {
+            const alertContainer = document.getElementById('alert-container');
+            alertContainer.innerHTML = `
+                <div class="alert alert-${tipo}">
+                    ${mensaje}
+                </div>
+            `;
+            
+            setTimeout(() => {
+                alertContainer.innerHTML = '';
+            }, 3000);
+        }
+
+        // Inicializar
+        verificarSesion();
+    </script>
+</body>
+</html>
